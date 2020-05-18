@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE install PUBLIC "-//Joomla! 2.5//DTD template 1.0//EN" "http://www.joomla.org/xml/dtd/1.6/template-install.dtd">
+<extension version="1.0" client="site" type="library" method="upgrade">
+    <name>USPS Library</name>
+    <libraryname>usps</libraryname>
+    <creationDate>2015-03-15</creationDate>
+    <version>1.0</version>
+    <author>Joseph (Joe) Gibson</author>
+    <authorUrl>www.joesboat.org</authorUrl>
+    <description>Class Libraries for USPS.org Extensions</description>
+    <files>
+        <folder>includes</folder>
+        <file>connectMysqliDatabase.php</file>
+        <file>dbUSPSd5WebSites.php</file>
+        <file>dbUSPSeducation.php</file>
+        <file>dbUSPSjoomla.php</file>
+        <file>dbUSPSSquadrons.php</file>
+        <file>dbUSPSWebSites.php</file>
+        <file>index.html</file>
+        <file>libraryDetails.xml</file>
+        <file>tableAccess.php</file>
+        <file>tableD5VHQAB.php</file>
+ 		<file>tableVHQAB.php</file>
+	</files>
+
+</extension>
