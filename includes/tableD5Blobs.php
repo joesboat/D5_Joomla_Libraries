@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS `blobs` (
 			title = 'stack'
 			b_data = stack contents
 		b_signature_image
+		b_roster_last_update 
+			flag = date string 
 		
 
 */
@@ -169,6 +171,11 @@ function get_custom_page($squad_no, $nbr){
 	return $row;			
 }
 //**************************************************************************
+function get_display_year(){
+	$row = $this->get_record('b_use','y_display');
+	return $row['title'];
+}
+//**************************************************************************
 function get_document($id){
 	$rec = $this->get_record('id',$id);
 	// $rec['data'] = base64_decode($rec['b_data']);
@@ -252,6 +259,24 @@ function get_mbr_picture($cert,$width=80){
 	$a['name'] = 'FP_image'.'.'.$row['b_type'];
 	$a['info'] = unserialize($row['b_info']);
 	return $a;
+}
+//**************************************************************************
+function get_roster_update_date(){
+	// get and return the date from the b_roster_last_update record 
+	$rec = $this->get_record('b_use','b_roster_last_update');
+	return $rec['flag'];
+}
+//**************************************************************************
+function get_session_stack($ip, $squad_no, $title='stack'){
+	//	b_session
+	//		item_part_no = ip address of remote 
+	//		squad_no = squad_no
+	//		title = 'stack'
+	//		b_info = stack contents
+	$select = "b_use='b_session' and item_part_no='$ip' and title='$title' and squad_no='$squad_no'" ;
+	$rec = $this->search_record($select);
+	$stack = unserialize($rec['b_info']);
+	return $stack;
 }
 //**************************************************************************
 function get_signature_image($squad_no,$year=''){
@@ -534,6 +559,14 @@ require_once('simpleimage.php');
 	}
 }
 //**************************************************************************
+function store_roster_update_date(){
+	$rec = $this->blank_record;
+	// write the current date to the b_roster_last_update 
+	$rec['b_use'] = 'b_roster_last_update';
+	$rec['flag'] = date("Y-m-d");
+	$this->add_record($rec);
+}
+//**************************************************************************
 function store_txt_image($squad_no,$b_use,$fname,$title="",$year=''){
 	$fh = fopen($fname,"rb") ;
 	$fsize = filesize($fname) ;
@@ -603,18 +636,6 @@ function store_xls_image($squad_no,$b_use,$fname,$title="",$year=''){
 		$rec['b_use']=$b_use;
 		$this->add_record($rec);
 	}
-}
-//**************************************************************************
-function get_session_stack($ip, $squad_no, $title='stack'){
-	//	b_session
-	//		item_part_no = ip address of remote 
-	//		squad_no = squad_no
-	//		title = 'stack'
-	//		b_info = stack contents
-	$select = "b_use='b_session' and item_part_no='$ip' and title='$title' and squad_no='$squad_no'" ;
-	$rec = $this->search_record($select);
-	$stack = unserialize($rec['b_info']);
-	return $stack;
 }
 //**************************************************************************
 function store_session_stack($squad_no,$ip,$stack,$title='stack'){

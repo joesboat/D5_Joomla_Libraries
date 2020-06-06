@@ -66,8 +66,7 @@ function abreviate_job_description($n){
 //	$n = str_replace('Assistant,','Asst.',$n);
 	$n = str_replace('Assistant','Asst.',$n);
 //	$n = str_replace('Educational','Ed.',$n);
-	$n = str_replace('Educational','Ed.',$n);
-	$n = str_replace('Education','Ed.',$n);
+//	$n = str_replace('Education','Ed.',$n);
 //	$n = str_replace('Membership','Mbrshp.',$n);
 	$n = str_replace('Member', 'Mbr.',$n);
 	$n = str_replace('Chairman,','Chr.',$n);
