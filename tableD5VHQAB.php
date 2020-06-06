@@ -107,27 +107,21 @@ function getCommitteeList($group){
 	return $ary;
 }
 //*********************************************************
-function getCommitteeMembers($jobcode){
-	$cmte_code = ($jobcode / 10) . '%';
-	$search = 'jobcode like '. "'$cmte_code' and year = '2015'" ;
-	$list = $this->njftp->search_records_in_order($search,'jobcode' );
-	$result = array();
-	foreach ($list as $job){
-		$result[] = $this->getMemberNameAndRank($job['certno'], TRUE);
-	}
-	return $result;
-}
-//*********************************************************
-function getCommitteesAndJobAssignments($dept, $year, $link=FALSE){
+function getDepartmentJobAssignments($dept, $year, $link=FALSE, $squad_no=''){
 $this->loadDBd5_excom();
 $this->loadDBjobs();
 $this->loadDBjobcodes();
 	// Create an associative array structure to identify and staff all dept. jobs 
-	// 1st level index is the Jobcode of a Job, group or committee
-	//		Begins with a 0 index to the department name 
-	// Each entry will be an array with the following elements
-	//		name - the of the Job
-	//		
+	// 1st level index is:
+	// 		0 index to the department name 
+	//		Jobcode index to the Job, group or committee
+	// Each jobcode entry will be an array with the following elements
+	//		title - the title of the Job
+	//		type - a number found in the jobcodes committee field - designates Job, Group or Committee
+	//		mbrs, asst, chrs or emeritus as indexes to an array of jobholder names 
+	//		the index to each jobholder name is the members certificate
+	
+	// First identify the department and find all department jobs  		
 	$excom = $this->exc->search_record("jobcode=$dept and year='$year'");
 	if ($excom){
 		// It's a normal department 
@@ -158,13 +152,35 @@ $this->loadDBjobcodes();
 	}
 	$query = "department = '$dept' "; // and committee > '0'";
 	$query .= "and committee != '3' ";
+	// Obtain a list of all department level job names 
 	$cmtes = $this->jobcodes->search_records_in_order($query,'display_order');
 
 	if (!$cmtes) return;
-
+	
+	// Now call a separate function to populate job assignments  
+	$list2 = $this->populateJobAssignments($cmtes,$year,$squad_no,$link);
+	return  array_replace($list,$list2);
+}	
+function populateGroupOrCommittee($jobcode,$year,$squad_no='',$link=FALSE){
+$this->loadDBjobcodes();
+	$query = "jobcode = '$jobcode' "; // and committee > '0'";
+	$query .= "and committee != '3' ";
+	// Obtain a list of all department level job names 
+	$cmtes = $this->jobcodes->search_records_in_order($query,'display_order');
+	return $this->populateJobAssignments($cmtes,$year,$squad_no,$link);
+}
+function populateJobAssignments($cmtes,$year,$squad_no='',$link=FALSE){
+$this->loadDBjobs();
+	// $cmtes is is an array of the jobcodes table records  
+	// returns an array containing data on a job assignment
+	// Each job assignment is an array where: 
+	// 		The array index is a jobcode.  The index points to an array with the following elements:
+	//			title - the title of the Job
+	//			type - a number found in the jobcodes committee field - designates Job, Group or Committee
+	//			mbrs, asst, chrs or emeritus as indexes to an array of jobholder names 
+	//				the index to each jobholder name is the members certificate	
+	
 	foreach($cmtes as $c){
-		$display_name = trim(str_replace('Chairman,','',$c['jdesc']));
-		$display_name = strtoupper(trim(str_replace('Chair,','',$display_name)));
 		if (is_array($c))
 			$ary = $c; 
 		else{
@@ -173,24 +189,19 @@ $this->loadDBjobcodes();
 		}
 		switch($c['committee']){
 			case 2:			// This is a group - No Chairperson
-				$mbrs = $this->getJobAssignments($ary['jobcode'],$year);
-				if (count($mbrs != 0)){
-					$list[$c['jobcode']]['title'] = strtoupper($display_name);
-					foreach ($mbrs as $m){
-						$list[$c['jobcode']]['mbrs'][] = getMemberNameAndGrade($m,$link);		
-					}
-					$list[$c['jobcode']]['type'] = 2;
-				}
+				$list[$ary['jobcode']] = $this->getGroupMembers($ary,$year,$link);
 				break;
 			case 3:
 			case 4:
-				continue;
+				continue 2;
 				break;
 			case 0:			// Named Job 
 				if ($c['committee_code']!=0)
-					continue;
+					continue 2;
 				if ($c['skip'] == 1)
-					continue;
+					continue 2;
+				$display_name = trim(str_replace('Chairman,','',$c['jdesc']));
+				$display_name = strtoupper(trim(str_replace('Chair,','',$display_name)));				
 				// Named Jobs not associated with a committee 			
 				$mbrs = $this->getJobAssignments($c['jobcode'],$year);
 				if (count($mbrs)>0){
@@ -202,51 +213,53 @@ $this->loadDBjobcodes();
 				}				
 				break;
 			default:	// We are getting data for the committee
-				$query="jobcode=".$ary['jobcode']." and year='$year'";
-				$j = $this->jobs->search_records_in_order($query);
-				if ($ary['committee']==2)
-					foreach($j as $i => $pos){
-						$m = $this->getD5Member($pos['certificate']);
-						//$this->print_d5_hdr_row('',$this->exc->get_d5_member_name(false,$m));
-					}
-				else {
-					// Show committee chairs
-					$chr = $this->getJobAssignments($ary['jobcode'],$year,'',TRUE);
-					$asst = $this->getJobAssignments($ary['jobcode']+1,$year);
-					$mbrs = $this->getJobAssignments($ary['jobcode']+2,$year);
-					$named = $this->get_named_job_assignments($ary['jobcode'],false,$year);
-					if (count($chr)==0 and count($asst)==0 and count($mbrs)==0 and count($named)==0)
-						continue ;
-					$list[$c['jobcode']]['title'] = strtoupper($display_name);
-					foreach ($chr as $m){
-						if (substr($m['jobcode'],4,1)==0){
-							$list[$c['jobcode']]['Chair'][] = getMemberNameAndGrade($m,$link);
-						} else {
-							$list[$c['jobcode']]['Chair Emeritus'][] = getMemberNameAndGrade($m,$link);
-						}
-					}
-					// Show committee assistant
-					foreach ($asst as $m)
-						$list[$c['jobcode']]['Asst.'][] = getMemberNameAndGrade($m,$link);
-					// Show members 
-					foreach ($mbrs as $m)
-						$list[$c['jobcode']]['mbrs'][] = getMemberNameAndGrade($m,$link);
-					// Show Named Jobs
-					foreach($named as $n){
-						$list[$c['jobcode']]['named'][] = $n;
-					}
-					$list[$c['jobcode']]['type'] = 1;
-				}
+				$list[$ary['jobcode']] = $this->getCommitteeMembers($ary,$squad_no,$year,$link);
 		}
 	}
-
-//////////////////////////////// Asst. Administration Officer //////////////
-//if ($loging) log_it("We are at D5 Booklet line",__LINE__);
-/*	$dept = 24001;
-	$pdf->print_d5_officer_name($dept,$year);
-	$pdf->print_committee_and_job_assignments($dept,$year);
-*/
 	return $list;
+}
+function getGroupMembers($c, $year, $link){
+	$display_name = trim(str_replace('Chairman,','',$c['jdesc']));
+	$display_name = strtoupper(trim(str_replace('Chair,','',$display_name)));
+	$mbrs = $this->getJobAssignments($c['jobcode'],$year);
+	$x['title'] = strtoupper($display_name);
+	$x['type'] = 2;
+	foreach ($mbrs as $m){
+		$x['mbrs'][] = getMemberNameAndGrade($m,$link);		
+	}
+	return $x;
+}
+function getCommitteeMembers($c, $squad_no, $year, $link){
+	$display_name = trim(str_replace('Chairman,','',$c['jdesc']));
+	$display_name = strtoupper(trim(str_replace('Chair,','',$display_name)));
+	$query="jobcode=".$c['jobcode']." and year='$year'";
+	// Show committee chairs
+	$chr = $this->getJobAssignments($c['jobcode'],$year,$squad_no,$link);
+	$asst = $this->getJobAssignments($c['jobcode']+1,$year,$squad_no,$link);
+	$mbrs = $this->getJobAssignments($c['jobcode']+2,$year,$squad_no,$link);
+	$emeritus = $this->getJobAssignments($c['jobcode']+9,$year,$squad_no,$link);
+	$named = $this->get_named_job_assignments($c['jobcode'],false,$year,$link);
+	$array['type'] = 1;
+	$array['title'] = strtoupper($display_name);
+	$array['Chair'] = $array['Chair Emeritus'] = $array['asst'] = $array['mbrs'] = $array['named'] = array();
+	if (count($chr)==0 and count($asst)==0 and count($mbrs)==0 and count($named)==0)
+		return $array;
+	foreach ($chr as $m){
+		$array['Chair'][$m['certificate']] = getMemberNameAndGrade($m,$link);
+	}
+	// show emeritus
+	foreach ($emeritus as $m)
+		$array['emeritus'][$m['certificate']] = getMemberNameAndGrade($m,$link);	
+	// Show committee assistant
+	foreach ($asst as $m)
+		$array['asst'][$m['certificate']] = getMemberNameAndGrade($m,$link);
+	// Show members 
+	foreach ($mbrs as $m)
+		$array['mbrs'][$m['certificate']] = getMemberNameAndGrade($m,$link);
+	// Show Named Jobs
+	foreach($named as $ix=>$n)
+		$array['named'][$ix] = $n;
+	return $array ;
 }
 //*********************************************************
 function getConvertObject(){
@@ -322,6 +335,21 @@ function getD5Squadrons(){
 	return $list;
 }
 //*********************************************************
+function getDistrictJobs($certno,$year){
+	$this->loadTable("jobs");
+	$this->loadTable("jobcodes");
+	$query = "certificate='$certno' and jobcode like '2%' and year = '$year'";
+	$jobs = $this->jobs->search_records_in_order($query,"jobcode" );
+	$list = array();
+	foreach($jobs as $job){
+		$jobcode = $job['jobcode'];
+		$desc = $this->jobcodes->get_record('jobcode',$jobcode);
+		if ($desc['jdesc'] == '') continue;
+		$list[$jobcode] = abreviate_job_description($desc['jdesc']);	
+	}
+	return $list;
+}
+//*********************************************************
 function getDistrictMembers($distno){
 	$this->loadTable("Members");
 	return $this->Members->get_mbr_records();
@@ -333,6 +361,7 @@ function getD5SquadronList($link = FALSE){
 }
 //*********************************************************
 function getDistrictNumber($certno){
+	return 5;
 	$this->loadD5Member($certno);
 	$dnum = sprintf("%02d",$this->mbr['distno']);
 	$squad = $this->websites->get_record('Name',$dnum);
@@ -350,6 +379,7 @@ function get_district_url($squad_no){
 }
 //*********************************************************
 function getExcomMember($jobcode,$year){
+$this->loadDBd5_excom();
 	// Queries excom to find cert. number for a jobcode and then 
 	// obtains that members record.
 	$query = "jobcode='$jobcode' and year='$year'" ;
@@ -524,6 +554,15 @@ function getMbrDdList($id, $squad_no='', $hidden = '', $cert, $title=''){
 	$str .= "$options";
 	$str .= "</select>";
 	return $str;
+}
+//*********************************************************
+function getMembersBoatData($certno){
+	$this->loadD5Member($certno);
+	$row['boat_name'] = $this->D5mbr['boat_name'];
+	$row['home_port'] = $this->D5mbr['home_port'];
+	$row['boat_type'] =$this->D5mbr['boat_type'];
+	$row['mmsi'] =$this->D5mbr['mmsi'];
+	return $row;
 }
 //*********************************************************
 function getMembersWithGmailAccounts(){
@@ -762,6 +801,7 @@ function get_named_job_assignments($c,$email,$year){
 $this->loadDBjobcodes();
 $this->loadTable("Members");
 $this->loadTable("Addresses");
+$this->loadDBd5_excom();
 // Evaluates the committee code to find associated named jobs 
 // Identifies the asigned member and obtains the member record 
 // builds and returns a list of named jobs and assignments
@@ -783,13 +823,29 @@ $this->loadTable("Addresses");
 				$r = $this->getD5Member($x['certificate']);
 				$m = array();
 				$m[0]=$p['jdesc'];
-				//$m[1]=$this->exc->get_d5_member_name($email,$r);
 				$m[1]=$this->getMemberName($r['certificate']);
-				$ms[count($ms)]=$m;
+				$ms[$x['certificate']]=$m;
 			}
 		}
 	}
 	return $ms; 
+}
+//*********************************************************
+function getNationalJobs($certno,$year){
+	$this->loadTable("jobs");
+	$this->loadTable("jobcodes");
+	$query = "certificate='$certno' and jobcode like '1%' and year = '$year'";
+	$jobs = $this->jobs->search_records_in_order($query,"jobcode" );
+	$list = array();
+	foreach($jobs as $job){
+		$jobcode = $job['jobcode'];
+		$query = "jobcode='$jobcode' and skip != 1";
+		$desc = $this->jobcodes->search_record($query);
+		if ($desc == '' or count($desc)==0) continue;
+		if ($desc['jdesc'] == '') continue;
+		$list[$jobcode] = abreviate_job_description($desc['jdesc']);	
+	}
+	return $list;
 }
 //*********************************************************
 function getRankObject(){
@@ -818,6 +874,21 @@ function getSquadronDisplayYear($squad_no='6243'){
 	}
 	// Otherwise return prior year
 	return date("Y") - 1;
+}
+//*********************************************************
+function getSquadronJobs($certno,$year){
+	$this->loadTable("jobs");
+	$this->loadTable("jobcodes");
+	$query = "certificate='$certno' and jobcode like '3%' and year = '$year'";
+	$jobs = $this->jobs->search_records_in_order($query,"jobcode" );
+	$list = array();
+	foreach($jobs as $job){
+		$jobcode = $job['jobcode'];
+		$desc = $this->jobcodes->get_record('jobcode',$jobcode);
+		if ($desc['jdesc'] == '') continue;
+		$list[$jobcode] = abreviate_job_description($desc['jdesc']);	
+	}
+	return $list;
 }
 //*************************************************************
 function getSquadronJobsForList($jc,$squad_no,$year){
@@ -906,12 +977,12 @@ function get_squadron_state($squad_no){
 function getSquadronCOW($squad_no){
 	$this->loadTable("d5_squadrons");
 	$this->loadSquadron($squad_no);
-	return $this->squad{'cow_date'};
+	return $this->squad['cow_date'];
 }
 //*********************************************************
 function getSquadronName($squad_no, $link=false){
 	$this->loadTable("d5_squadrons");
-	//$this->loadSquadron($squad_no);
+	$this->loadSquadron($squad_no);
 	return $this->d5_squadrons->getSquadronName($squad_no,$link);
 }
 //*********************************************************
