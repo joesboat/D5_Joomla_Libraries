@@ -63,7 +63,19 @@ global $exc, $jobs, $blob,  $mbr, $sqd;
 	$this->doc_types['trvl'] = 		'Traveler';		
 	$this->doc_types['tplk'] =		'Traveler with Plaque';							
 	$this->doc_types['spc']	=		'Special';
-	
+	$this->awd_names = array(	
+					"Caravelle Award"=>"Caravelle Award",
+					"Commanders Trophy Advanced Grades Award"=>"Commanders Trophy Advanced Grades Award",
+					"Commanders Trophy Electives Award"=>"Commanders Trophy Electives Award",
+					"D/5 Civic Service Award"=>"D/5 Civic Service Award",
+					"Distinctive Communicator Award - Newsletter"=>"Distinctive Communicator Award - Newsletter",
+					"Distinctive Communicator Award - Web Site"=>"Distinctive Communicator Award - Web Site",
+					"Henry E. Sweet Award"=>"Henry E. Sweet Excellence Award",
+					"Kenneth Smith Seamanship Award"=>"Kenneth Smith Seamanship Award",
+					"Prince Henry Award"=>"Prince Henry Award",
+					"USPS Civic Service Award"=>"USPS Civic Service Award",
+					"Workboat Award"=>"Workboat Award",
+					""=>"Select a standard award of enter new in textbox!");
 	
 	
 	//$this->cols=$col_list;

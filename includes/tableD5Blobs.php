@@ -6,7 +6,7 @@ require_once(JPATH_LIBRARIES ."/usps/tableAccess.php");
 //require_once(JPATH_LIBRARIES ."/usps/tableBlobs.php");
 //************************************************************************************
 class tableD5blobs extends USPStableAccess{
-	// Generic routines to manage a table 
+	// Generic routines to manage a table
 //********************************* Public Variables **********************************
 //********************************* Private Variables *********************************
 //private $manager ;
@@ -25,19 +25,20 @@ CREATE TABLE IF NOT EXISTS `blobs` (
   	`b_data` mediumblob		Typically file or picture data 	
 
 	b_use 
-		y_manage			
-		y_display
-		mbr_picture_60
-		mbr_picture_80
-		mbr_picture_640
-		item_150
-		item_640
+
 		b_award_document
 			item_part_no:award_id
 			b_type: document/pdf, document/jpg, document/png 
 			b_info: $file array in string format
 			title: folder/file name in url format  
 			b_data = not used
+		b_award_name  (Use function store_aware_name or get_award_names)
+			title: 			Award Name 
+			b_type:			Award from.  Can be Squadron (squad), District (dist) or National (nat)
+			item_part_no:	Award to.  Can be squad or mbr 
+			squad_no:		Needed for Squadron Defined Awards, blank for district awards 
+			b_info:			Award Description - optional 
+			  
 		b_cmd_msg
 		b_custom_1
 		b_custom_2
@@ -66,15 +67,21 @@ CREATE TABLE IF NOT EXISTS `blobs` (
 		b_signature_image
 		b_roster_last_update 
 			flag = date string 
-		
+		item_150
+		item_640		
+		mbr_picture_60
+		mbr_picture_80
+		mbr_picture_640
+		y_manage			
+		y_display
 
 */
 //****************************************************************************
 function __construct($db, $caller=''){
-		// Creates the variables to contain identity of data and tables 
+	// Creates the variables to contain identity of data and tables 
 	parent::__construct('d5_blobs', $db, $caller='');
-		//$this->list_cols=$col_subset; 
-		//$this->cols=$col_list;		
+	//$this->list_cols=$col_subset; 
+	//$this->cols=$col_list;		
 }// constructer
 //**************************************************************************
 function add_session_stack($squad_no,$ip,$stack,$title='stack'){
@@ -148,6 +155,41 @@ function get_award_documents($award_id){
 	$query = "b_use = 'b_award_document' and item_part_no = '$award_id'";
 	$documents = $this->search_records_in_order($query,"b_info, b_type");
 	return $documents;
+}
+//**************************************************************************
+function  get_award_names($from=''){
+/* Searches to find records where b_use field is set to b_award_name 
+// Converts data to return an array with the following indexes:  
+	award_name 		copied from title field 
+	award from		copied from b_type field  
+	award_to		copied from item_part_no field  
+	squad_no		copied from squad_no field  
+	description		copied from b_info field			
+
+		title: 	  (Use function store_aware_name or get_award_names)
+			title: 			Award Name 
+			b_type:			Award from.  Can be Squadron (squad), District (dist) or National (nat)
+			item_part_no:	Award to.  Can be squad or mbr 
+			squad_no:		Needed for Squadron Defined Awards, blank for district awards 
+			b_info:			Award Description - optional 
+	
+	The input parameter $from designates the type of awards:
+		"" for the district and national awards list 
+		#### for awards created by a specific squadron
+		 
+*/			  
+
+	$query ="b_use = 'b_award_name' and (squad_no='' or squad_no='$from')";
+	$recs = $this->search_records_in_order($query,'title');
+	$list = array();
+	foreach($recs as $rec){
+		$list[$rec['id']]['award_name'] = $rec['title']; 
+		$list[$rec['id']]['awarded_by'] = $rec['b_type']; 
+		$list[$rec['id']]['awarded_to'] = $rec['item_part_no']; 
+		$list[$rec['id']]['squad_no'] = $rec['squad_no']; 
+		$list[$rec['id']]['description'] = $rec['b_info']; 
+	}
+	return $list ;
 }
 //**************************************************************************
 function get_cdr_message($squad_no,$year=''){
@@ -368,6 +410,33 @@ function store_award_document($award_id, $rel_file_name, $mime, $doc_type, $year
 		$this->add_record($rec);
 	}
 	return '';
+}
+function store_award_name($award){
+/*
+	Creates a blog record with "b_award_name" in the b_use field
+	Moves the fields from the $award parameter into the blog record per the following convert table  
+		award_name to title  	  
+		award_from to b_type
+		award_to to item_part_no 
+		squad_no  
+		description to 	b_info 
+*/	
+	$rec = array('b_use'=>"b_award_name");		  
+	$query = "b_use = 'b_award_name'";
+	$query .= " title = '".$award['award_name']."'";
+	$query .= " squad_no = '".$award['squad_no']."'"; 
+	$exist = $this->search_record($query);
+	$rec['title'] = $award['award_name'] ; 
+	$rec['b_type'] = $award['awarded_by'];
+	$rec['item_part_no'] = $award['awarded_to'] ; 
+	$rec['squad_no'] = $award['squad_no']; 
+	$rec['b_info'] = $award['description']; 
+	if ($exist){
+		 $result = $this->update_record($exist['id'],$rec);
+	} else {
+		$result = $this->add_record($rec);
+	}
+	
 }
 //**************************************************************************
 function store_bklt_picture($squad_no,$b_use,$fname,$year=''){
