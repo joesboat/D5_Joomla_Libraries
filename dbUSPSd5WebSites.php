@@ -11,6 +11,8 @@ Owner: 	Joseph P. Gibson - USPS District 5 Webmaster
 //jimport('usps.includes.tableD5Events');
 //jimport('usps.includes.tableD5Locations');
 //jimport('usps.includes.routines');
+
+define ('MAX_DB_FILE_SIZE', 1000000);
 //*************************************************************************
 class USPSd5dbWebSites { 		// extends USPSdbWebSites {
 // Routines that utilize data from the events table to display information.  
@@ -29,6 +31,7 @@ private $db;
 public $display_by;
 private $dist;
 private $awds;
+private $docs;
 public $evts;
 private $locs;
 //private $mbrclasses;
@@ -97,6 +100,16 @@ function deleteEvent($event_id){
 }
 //*********************************************************
 function deleteExtraFile($url){
+	$this->loadDB_docs();
+	// This could be a real file name or a call to get_doc.php
+	// Determine if call to get_doc 
+	$a_url = explode('get_doc',$url);
+	if (count($a_url)>0){
+		// It's a call to get_doc() - figure out the index. 
+		$a_item = explode('item=', $a_url[1]);
+		if (count($a_item) > 0)
+			$this->docs->delete_records("id",$a_item[1]);
+	}
 	// $rel_file_name includes folders relative to JPATH_BASE.'/'
 	$ok = $this->loadDB_blobs();
 	if (isset($loging) and $loging==1) log_it("The url parameter is: $url");
@@ -238,6 +251,11 @@ function getDocTypes(){
 	//return $this->evts->doc_types;
 }
 //*********************************************************
+function getDocumentsObject(){
+	$this->loadDB_docs();
+	return $this->docs;	
+}
+//*********************************************************
 function get_event_blank(){
 	$this->loadDB_events();
 	return $this->blank_event;
@@ -268,7 +286,8 @@ function getEventDescription($event_id){
 }
 //*********************************************************
 function getEventDocuments($event_id,$public = FALSE){
-	$ok = $this->loadDB_blobs();
+//	$ok = $this->loadDB_blobs();
+	$ok = $this->loadDB_docs();
 	// Build a multi-diminsion array where each base element is the document type
 	// t 
 	// Document types in b_info can be 'spc', 'desc', 'reg' or 'sch'
@@ -276,12 +295,20 @@ function getEventDocuments($event_id,$public = FALSE){
 	// If b_info is spc use the array name is in the title column 
 	// Array indexes are obtained from the b_type column 
 	// If $public do not display document if flag field has the word private
-	$list = array();
-	$doc_list = $this->blobs->get_event_documents($event_id,$public);
-	foreach($doc_list as $doc){
-		$list[$doc['b_info']][$doc['b_type']] = $doc['title'];
+	$list1 = array();
+//	$doc_list = $this->blobs->get_event_documents($event_id,$public);
+	$doc_list1 = $this->docs->get_event_documents($event_id,$public);
+	foreach($doc_list1 as $doc){
+		if ($doc['in_db']){
+			$list1[$doc['name']][$doc['type']] = 
+				getSiteUrl()."/php/get_doc.php?item=".$doc['id'];
+		} else {
+			// It's a file
+			$list1[$doc['name']][$doc['type']] = 
+				getSiteUrl().$doc['file'];
+		}
 	}
-	return $list;
+	return $list1;
 }
 //*********************************************************
 function getEventName($event, $link=false){
@@ -325,7 +352,7 @@ function getLocation($loc_id){
 	return $this->locs->get_location_data($loc_id);
 }
 //*********************************************************
-function getLocationName($location, $link=false){
+function getLocationName($location, $link=FALSE){
 	$url=$location['location_url'];
 	if (!$link or $url == ''){
 		$str = "<span class='location' >". $location['location_name'] ."</span>";
@@ -390,11 +417,6 @@ function getRegistratonsObject(){
 	return $this->registrations;
 }
 //*********************************************************
-function getSpecificDocument($id){
-	$ok = $this->loadDB_blobs();
-	return $this->blobs->get_document($id);
-}
-//*********************************************************
 private function loadDB_attendees(){
 	$zya = true;
 	if (!isset($this->attendees)){
@@ -441,6 +463,21 @@ private function loadDB_courses(){
 		return true;
 	}
 	return true;
+}
+//*********************************************************
+private function loadDB_docs(){
+	$zya = true;
+	if (!isset($this->docs)){
+		if (!$this->docs = JoeFactory::getTable("tableD5documents",$this->db)){
+			log_it("Did not open library tableD5events table");
+			return false;
+		}
+		$this->blank_event = $this->docs->blank_record;
+		$this->blank_event['event_description'] = '';
+		return true;
+	}
+	return true;
+
 }
 //*********************************************************
 private function loadDB_events(){
@@ -501,7 +538,8 @@ function storeEventLink($event_id,$b_use,$URL){
 }
 //*********************************************************
 function updateEvent($event){
-	$ok = $this->loadDB_blobs();
+	// $ok = $this->loadDB_blobs();
+	$ok = $this->loadDB_docs();
 	$this->loadDB_events();
 	$year = date('Y',strtotime($event['start_date']));
 	$return = '';
@@ -525,16 +563,18 @@ function updateEvent($event){
 	} else {
 		$type = $doc_types[$event['doc_type']];
 	}
-	$rel_file_name = storeExtraFile(			
-		$event['event_id'],
-		$event['event_extra'],	// The $_FILE array
-		$type,
-		$year) ;
+	// Determine - file system or database 
+	if ($event['event_extra']['size'] > MAX_DB_FILE_SIZE)
+		$rel_file_name = storeExtraFile(			
+			$event['event_id'],
+			$event['event_extra'],	// The $_FILE array
+			$type,
+			$year) ;
 	if ($event['event_extra']['type'] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 		$event['event_extra']['type'] = "application/msword";
 			
 	// Call Blobs Routine to associate file name with event 	
-		$return = $this->blobs->store_event_document(
+		$return = $this->docs->store_event_document(
 			$event['event_id'],
 			$rel_file_name,
 			$event['event_extra']['type'], //$mime

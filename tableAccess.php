@@ -583,6 +583,8 @@ function get_duplicates($field){
         // We now have two arrays, $array and $row 
         $dif = array();
         // Compare each field in $_REQUEST array with db row.
+		if ($array['event_id'] == '') 
+			$array['event_id'] = 0;
         foreach ($array as $key => $value) {
             if (in_array($key, $this->cols)) {
                 if (strlen($array[$key]) == strlen($row[$key]) and $array[$key] == $row[$key])

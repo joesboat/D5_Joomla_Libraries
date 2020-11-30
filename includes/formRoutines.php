@@ -66,8 +66,7 @@ function abreviate_job_description($n){
 //	$n = str_replace('Assistant,','Asst.',$n);
 	$n = str_replace('Assistant','Asst.',$n);
 //	$n = str_replace('Educational','Ed.',$n);
-	$n = str_replace('Educational','Ed.',$n);
-	$n = str_replace('Education','Ed.',$n);
+//	$n = str_replace('Education','Ed.',$n);
 //	$n = str_replace('Membership','Mbrshp.',$n);
 	$n = str_replace('Member', 'Mbr.',$n);
 	$n = str_replace('Chairman,','Chr.',$n);
@@ -358,7 +357,7 @@ if ($cncl) {
 <?php
 }
 //*********************************************************
-function show_option_list($ary, $sel){
+function show_option_list($ary, $sel,$shw=true ){
 	// The supplied array contains a list of items of the format:
 	//	ID => NAME 
 	// Function will build an option list in the following format:
@@ -377,7 +376,7 @@ function show_option_list($ary, $sel){
 		$str .= ">" . $value . '</option>' ; 
 		echo $str ; 
 	}
-	if (!$found){
+	if ((!$found) and $shw ){
 		$str = '<option value="" selected>Select from list.</select>' ;
 		echo $str ; 
 	}

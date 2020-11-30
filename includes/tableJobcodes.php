@@ -40,38 +40,13 @@ function format_committee_position($name,$ary){
 	return $str."</tbody>"; 
 }
 //*************************************************************
-function get_active_d5_committes($dept,$order="jdesc"){
-	// join jobdesc, jobs, members
-	// omit jobdesc ending in 2 (committee members)
-	// 
-	$query = '';
-	$rows=array();
-	if ($dept != ""){
-		$query .= "(";
-		$r = substr($dept,4,1);	
-		if ($r == '0'){
-			$query .= "jobcodes.department = '";
-			$query .= substr($dept,0,4)."1'";
-			$query .= " or ";	
-		}
-		$query .= "jobcodes.department = '$dept'";
-		$query .= ") and ";
-	}
-	$query .= "("; 
-	$query .= "jobcode LIKE '2____' ";
-	$query .= ")";
-	$query .= "and d5_job = 1";
-	$jcs = $this->search_records_in_order($query,$order);
-	return $jcs; 
-}
-//*************************************************************
 function get_squad_assignments($order){
 	//global $mbr;
 	// join jobdesc, jobs, members
 	// omit jobdesc ending in 2 (committee members)
 	// 
 	if ($order == 'display_order'){
-		$query = 'display_order > 0';
+		$query = "display_order > 0 and jobcode like '3____' ";
 	}else{
 		$query = "jobcode LIKE '3___0'";
 		$query .= " or jobcode LIKE '3___5'";

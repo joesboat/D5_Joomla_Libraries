@@ -227,29 +227,10 @@ function show_d5_member_dd_list_box($officers,$cert){
 	echo "</select>";
 }
 //*********************************************************
-public function show_full_bridge($year){
-global $mbr; 
-	echo "<input type='text' name='year' value='$year'><br/>"; 
-	$rows=$this->search_records_in_order("excom_position!='Webmaster'","jobcode"); 
-	echo "<table>";
-	echo "<tr><th>Position:</th><th>Certificate:</th><th>Name:</th></tr>";
-	foreach($rows as $row){
-		echo "<tr>";
-		echo "<td>".$row['excom_position']."</td>";
-		echo "<td><input type='text' name='".$row['jobcode']."' value='".$row['certificate']."'></td>";
-		echo "<td>".
-			$this->get_d5_member_name(true,$mbr->get_mbr_record($row['certificate'])).
-			"</td>";
-		echo "</tr>";
-	}
-	echo "</table>";
-}
-//*********************************************************
 public function update_full_bridge($pst){
 global $jobs;
 	// Passed the $_POST array as $pst
 	// Updates table
-	// $pst fields corrospond to table setup in show_full_bridge()
 	foreach($_POST as $key=>$item){
 		$item = strtolower($item);
 		if ($key == 'command') continue;

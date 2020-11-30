@@ -63,7 +63,19 @@ global $exc, $jobs, $blob,  $mbr, $sqd;
 	$this->doc_types['trvl'] = 		'Traveler';		
 	$this->doc_types['tplk'] =		'Traveler with Plaque';							
 	$this->doc_types['spc']	=		'Special';
-	
+	$this->awd_names = array(	
+					"Caravelle Award"=>"Caravelle Award",
+					"Commanders Trophy Advanced Grades Award"=>"Commanders Trophy Advanced Grades Award",
+					"Commanders Trophy Electives Award"=>"Commanders Trophy Electives Award",
+					"D/5 Civic Service Award"=>"D/5 Civic Service Award",
+					"Distinctive Communicator Award - Newsletter"=>"Distinctive Communicator Award - Newsletter",
+					"Distinctive Communicator Award - Web Site"=>"Distinctive Communicator Award - Web Site",
+					"Henry E. Sweet Award"=>"Henry E. Sweet Excellence Award",
+					"Kenneth Smith Seamanship Award"=>"Kenneth Smith Seamanship Award",
+					"Prince Henry Award"=>"Prince Henry Award",
+					"USPS Civic Service Award"=>"USPS Civic Service Award",
+					"Workboat Award"=>"Workboat Award",
+					""=>"Select a standard award of enter new in textbox!");
 	
 	
 	//$this->cols=$col_list;
@@ -96,7 +108,7 @@ function addBlankAwardRecord(){
 function getAwards($squad_no, $select=''){
 	$query = "";
 	if ($squad_no != "")
-		$query .= "award_to_squadron = '$squad_no'";
+		$query .= "squad_no='$squad_no' or award_to_squadron = '$squad_no'";
 	if ($select != '')
 		$query .= " and ( $select ) ";
 	$list = $this->search_records_in_order($query,'award_year DESC, award_name, award_place');

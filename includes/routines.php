@@ -13,6 +13,7 @@ require_once(JPATH_LIBRARIES."/usps/includes/tableD5Awards.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableCourses.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableConvert.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableD5Blobs.php");
+require_once(JPATH_LIBRARIES."/usps/includes/tableD5Documents.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableD5Events.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableD5Locations.php");
 require_once(JPATH_LIBRARIES."/usps/includes/tableD5Squadrons.php");
@@ -193,7 +194,7 @@ function get_phone_number($row){
 }
 //*************************************************************************
 function getSiteUrl(){
-	return "http://".$_SERVER['SERVER_NAME'].$_SERVER['CONTEXT_PREFIX'];
+	return "https://".$_SERVER['SERVER_NAME'].$_SERVER['CONTEXT_PREFIX'];
 }
 //*************************************************************************
 function getDestFromConfiguration(){
