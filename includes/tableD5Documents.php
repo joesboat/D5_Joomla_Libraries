@@ -53,7 +53,9 @@ function get_award_documents($award_id){
 	$documents = $this->search_records_in_order($query,"name");
 	$docs = array();
 	foreach ($documents as $x=>&$doc){
-		$docs[$doc['name']] = getSiteUrl()."/php/get_doc.php?item=".$doc['id'];
+		//$docs[$doc['name']] = getSiteUrl()."/php/get_doc.php?item=".$doc['id'];
+		unset($doc['data']); 	//  Data is only needed when the document is displayed
+		$docs[$doc['name']] = $doc;
 	}
 	
 	return $docs;
